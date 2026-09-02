@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
+
+if __package__ is None or __package__ == "":
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from scripts.config import INSTRUMENTS, NY_TIMEZONE
 from scripts.data_provider import ProviderError, TwelveDataProvider

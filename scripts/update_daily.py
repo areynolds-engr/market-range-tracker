@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import sys
 from datetime import datetime, time as dt_time
+from pathlib import Path
 from zoneinfo import ZoneInfo
+
+if __package__ is None or __package__ == "":
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from scripts.config import INSTRUMENTS, NY_TIMEZONE
 from scripts.data_provider import ProviderError, TwelveDataProvider
