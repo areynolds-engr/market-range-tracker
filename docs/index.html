@@ -34,10 +34,19 @@
     <section class="analytics">
       <div class="chart-panel">
         <div class="section-head">
-          <h2>Historical Range</h2>
-          <span id="rowCount">0 rows</span>
+          <div>
+            <h2>Day Trend</h2>
+            <span id="trendMeta">Select a symbol and date</span>
+          </div>
+          <div class="mini-controls">
+            <label>Chart Symbol<select id="chartSymbol"></select></label>
+            <label>Chart Date<input id="chartDate" type="date"></label>
+          </div>
         </div>
-        <canvas id="rangeChart" aria-label="Historical range chart"></canvas>
+        <div class="range-legend" id="rangeLegend"></div>
+        <div class="trend-scroll">
+          <canvas id="trendChart" width="1800" height="420" aria-label="Intraday price trend chart"></canvas>
+        </div>
       </div>
       <aside class="question-panel">
         <h2>Ask the data</h2>
@@ -52,7 +61,10 @@
     <section class="table-panel">
       <div class="section-head">
         <h2>History</h2>
-        <input id="tableSearch" placeholder="Search table...">
+        <div class="table-tools">
+          <span id="rowCount">0 rows</span>
+          <input id="tableSearch" placeholder="Search table...">
+        </div>
       </div>
       <div class="table-wrap">
         <table>

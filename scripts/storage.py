@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 import shutil
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
 
-from scripts.config import COLUMNS, CSV_PATH, DOCS_JSON_PATH, JSON_PATH
+from scripts.config import COLUMNS, CSV_PATH, DOCS_INTRADAY_DIR, DOCS_JSON_PATH, JSON_PATH, RAW_DATA_DIR
 
 
 def load_records(csv_path: Path = CSV_PATH) -> pd.DataFrame:
@@ -48,3 +49,34 @@ def save_records(frame: pd.DataFrame, csv_path: Path = CSV_PATH, json_path: Path
     if json_path == JSON_PATH:
         docs_json_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(json_path, docs_json_path)
+
+
+def save_intraday_candles(candles: pd.DataFrame, symbol: str, session_date: date) -> None:
+    if candles.empty:
+        return
+    frame = candles.copy()
+    frame["datetime"] = pd.to_datetime(frame["datetime"], errors="coerce")
+    frame = frame.dropna(subset=["datetime", "open", "high", "low", "close"]).sort_values("datetime")
+    records = []
+    for row in frame.itertuples(index=False):
+        records.append(
+            {
+                "datetime": row.datetime.isoformat(),
+                "open": round(float(row.open), 8),
+                "high": round(float(row.high), 8),
+                "low": round(float(row.low), 8),
+                "close": round(float(row.close), 8),
+            }
+        )
+    payload = {
+        "schema_version": 1,
+        "symbol": symbol,
+        "date": session_date.isoformat(),
+        "timezone": "America/New_York",
+        "interval": "1min",
+        "records": records,
+    }
+    for base_dir in (RAW_DATA_DIR, DOCS_INTRADAY_DIR):
+        path = base_dir / symbol / f"{session_date.isoformat()}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")

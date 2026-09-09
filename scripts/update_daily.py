@@ -11,7 +11,7 @@ if __package__ is None or __package__ == "":
 from scripts.config import INSTRUMENTS, NY_TIMEZONE
 from scripts.data_provider import ProviderError, TwelveDataProvider
 from scripts.ranges import calculate_daily_range
-from scripts.storage import merge_records, save_records
+from scripts.storage import merge_records, save_intraday_candles, save_records
 
 
 def target_date(now: datetime) -> datetime.date:
@@ -36,7 +36,7 @@ def main() -> None:
             print(f"\n{instrument.storage_symbol}\nSkipped: forex weekend.")
             continue
         try:
-            candles = provider.fetch_intraday_window(instrument.provider_symbol, session_date)
+            candles = provider.fetch_intraday_day(instrument.provider_symbol, session_date)
         except ProviderError as exc:
             print(f"\n{instrument.storage_symbol}\nProvider error: {exc}")
             continue
@@ -44,6 +44,7 @@ def main() -> None:
         if record is None:
             print(f"\n{instrument.storage_symbol}\nSkipped: no market data.")
             continue
+        save_intraday_candles(candles, instrument.storage_symbol, session_date)
         records.append(record)
         print(
             f"\n{instrument.storage_symbol}\n"

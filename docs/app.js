@@ -9,7 +9,7 @@ const PERIODS = [
 ];
 
 let records = [];
-let chart;
+let trendChart;
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n, digits = 5) => Number(n).toLocaleString("en-US", { maximumFractionDigits: digits, minimumFractionDigits: digits });
@@ -27,8 +27,12 @@ async function loadData() {
 
 function setupControls() {
   $("symbolFilter").innerHTML = SYMBOLS.map((symbol) => `<option>${symbol}</option>`).join("");
+  $("chartSymbol").innerHTML = SYMBOLS.filter((symbol) => symbol !== "All").map((symbol) => `<option>${symbol}</option>`).join("");
   $("periodButtons").innerHTML = PERIODS.map(([label], index) => `<button class="secondary ${index === 5 ? "active" : ""}" data-period="${label}">${label}</button>`).join("");
   ["symbolFilter", "dateFilter", "startDateFilter", "endDateFilter", "tableSearch"].forEach((id) => $(id).addEventListener("input", render));
+  ["chartSymbol", "chartDate"].forEach((id) => $(id).addEventListener("input", renderTrend));
+  const latest = latestDate(records);
+  if (latest) $("chartDate").value = latest;
   $("periodButtons").addEventListener("click", (event) => {
     const button = event.target.closest("button");
     if (!button) return;
@@ -78,7 +82,7 @@ function filteredRecords() {
 function render() {
   const visible = filteredRecords();
   renderSummary();
-  renderChart(visible);
+  renderTrend();
   renderTable(visible);
   $("rowCount").textContent = `${visible.length} rows`;
 }
@@ -105,30 +109,84 @@ function renderSummary() {
   }).join("");
 }
 
-function renderChart(list) {
-  const ctx = $("rangeChart");
-  const datasets = ["NZDUSD", "GBPUSD", "AUDUSD", "BTCUSD"].map((symbol, index) => {
-    const colors = ["#0c7c66", "#ba4a35", "#3867a6", "#c2952e"];
-    return {
-      label: displaySymbol(symbol),
-      data: list.filter((record) => record.symbol === symbol).map((record) => ({ x: record.date, y: Number(record.range_percent) })),
-      borderColor: colors[index],
-      backgroundColor: colors[index],
-      tension: 0.25,
-      pointRadius: 2,
-    };
-  });
-  if (chart) chart.destroy();
-  chart = new Chart(ctx, {
+async function renderTrend() {
+  const selectedSymbol = $("chartSymbol").value || "NZD/USD";
+  const symbol = selectedSymbol.replace("/", "");
+  const date = $("chartDate").value || latestDate(records);
+  const range = records.find((record) => record.symbol === symbol && record.date === date);
+  $("trendMeta").textContent = `${selectedSymbol} on ${date || "no date selected"}`;
+  $("rangeLegend").innerHTML = range
+    ? `<span class="range-pill high">08:00 high ${fmt(range.high)}</span><span class="range-pill low">08:00 low ${fmt(range.low)}</span>`
+    : `<span class="range-pill">No stored 08:00 range for this selection</span>`;
+
+  let candles = [];
+  try {
+    const response = await fetch(`data/intraday/${symbol}/${date}.json`, { cache: "no-store" });
+    if (response.ok) {
+      const payload = await response.json();
+      candles = payload.records || [];
+    }
+  } catch (error) {
+    candles = [];
+  }
+  drawTrendChart(candles, range);
+}
+
+function drawTrendChart(candles, range) {
+  const ctx = $("trendChart");
+  const labels = candles.map((candle) => timeOnly(candle.datetime));
+  const closeData = candles.map((candle) => Number(candle.close));
+  const highLine = range ? candles.map(() => Number(range.high)) : [];
+  const lowLine = range ? candles.map(() => Number(range.low)) : [];
+  if (trendChart) trendChart.destroy();
+  trendChart = new Chart(ctx, {
     type: "line",
-    data: { datasets },
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Price",
+          data: closeData,
+          borderColor: "#171915",
+          backgroundColor: "#171915",
+          tension: 0.18,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+        {
+          label: "08:00-08:30 High",
+          data: highLine,
+          borderColor: "#ba4a35",
+          borderDash: [8, 6],
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+        {
+          label: "08:00-08:30 Low",
+          data: lowLine,
+          borderColor: "#0c7c66",
+          borderDash: [8, 6],
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+      ],
+    },
     options: {
-      parsing: false,
-      responsive: true,
-      scales: { x: { type: "category" }, y: { title: { display: true, text: "Range %" } } },
+      responsive: false,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          ticks: { maxTicksLimit: 24 },
+          title: { display: true, text: "Time of day, America/New_York" },
+        },
+        y: { title: { display: true, text: "Price" } },
+      },
       plugins: { legend: { position: "bottom" } },
     },
   });
+  if (!candles.length) {
+    $("trendMeta").textContent = `${$("trendMeta").textContent} - no intraday file yet`;
+  }
 }
 
 function renderTable(list) {

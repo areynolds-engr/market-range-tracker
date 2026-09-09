@@ -45,13 +45,22 @@ class TwelveDataProvider:
         ny = ZoneInfo(NY_TIMEZONE)
         start = datetime.combine(session_date, dt_time(8, 0), tzinfo=ny)
         end = datetime.combine(session_date, dt_time(8, 30), tzinfo=ny)
+        return self.fetch_intraday_range(symbol, start, end, outputsize=500)
+
+    def fetch_intraday_day(self, symbol: str, session_date: date) -> pd.DataFrame:
+        ny = ZoneInfo(NY_TIMEZONE)
+        start = datetime.combine(session_date, dt_time(0, 0), tzinfo=ny)
+        end = datetime.combine(session_date, dt_time(23, 59), tzinfo=ny)
+        return self.fetch_intraday_range(symbol, start, end, outputsize=5000)
+
+    def fetch_intraday_range(self, symbol: str, start: datetime, end: datetime, outputsize: int) -> pd.DataFrame:
         params = {
             "symbol": symbol,
             "interval": "1min",
             "start_date": start.strftime("%Y-%m-%dT%H:%M:%S"),
             "end_date": end.strftime("%Y-%m-%dT%H:%M:%S"),
             "timezone": NY_TIMEZONE,
-            "outputsize": 500,
+            "outputsize": outputsize,
             "order": "ASC",
             "apikey": self.api_key,
         }
@@ -66,6 +75,7 @@ class TwelveDataProvider:
 
         frame["datetime"] = pd.to_datetime(frame["datetime"], errors="coerce")
         frame = frame.dropna(subset=["datetime"])
+        ny = ZoneInfo(NY_TIMEZONE)
         if frame["datetime"].dt.tz is None:
             frame["datetime"] = frame["datetime"].dt.tz_localize(ny, nonexistent="shift_forward", ambiguous="NaT")
         else:

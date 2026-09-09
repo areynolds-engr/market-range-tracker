@@ -82,6 +82,8 @@ The backfill:
 - updates existing date/symbol rows instead of duplicating them
 - writes `data/daily_ranges.csv`, `data/daily_ranges.json`, and `docs/data/daily_ranges.json`
 
+Version 1 backfill stores processed daily ranges only. Raw full-day candle files are created by the daily updater as new days are processed.
+
 ## Daily update
 
 ```sh
@@ -89,6 +91,15 @@ python3 scripts/update_daily.py
 ```
 
 The daily script uses today in America/New_York and refuses to save before 08:45 New York time. This gives the provider a little time to finalize the 08:00-08:30 window.
+
+The daily script also writes raw 1-minute intraday JSON for the day to:
+
+```text
+data/raw/SYMBOL/YYYY-MM-DD.json
+docs/data/intraday/SYMBOL/YYYY-MM-DD.json
+```
+
+The dashboard uses those raw files to show the day trend with horizontal 08:00-08:30 high and low lines.
 
 ## GitHub secret
 
