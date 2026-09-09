@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass
-from datetime import date, datetime, time as dt_time
+from datetime import date, datetime, time as dt_time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -49,8 +49,8 @@ class TwelveDataProvider:
 
     def fetch_intraday_day(self, symbol: str, session_date: date) -> pd.DataFrame:
         ny = ZoneInfo(NY_TIMEZONE)
-        start = datetime.combine(session_date, dt_time(0, 0), tzinfo=ny)
-        end = datetime.combine(session_date, dt_time(23, 59), tzinfo=ny)
+        start = datetime.combine(session_date, dt_time(8, 0), tzinfo=ny)
+        end = datetime.combine(session_date + timedelta(days=1), dt_time(7, 59), tzinfo=ny)
         return self.fetch_intraday_range(symbol, start, end, outputsize=5000)
 
     def fetch_intraday_range(self, symbol: str, start: datetime, end: datetime, outputsize: int) -> pd.DataFrame:

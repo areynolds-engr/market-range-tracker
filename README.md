@@ -90,16 +90,16 @@ Version 1 backfill stores processed daily ranges only. Raw full-day candle files
 python3 scripts/update_daily.py
 ```
 
-The daily script uses today in America/New_York and refuses to save before 08:45 New York time. This gives the provider a little time to finalize the 08:00-08:30 window.
+The daily script runs after 08:45 New York time and processes the prior completed session. For example, a run on September 10 processes the September 9 session, which starts at 08:00 on September 9 and ends at 07:59 on September 10.
 
-The daily script also writes raw 1-minute intraday JSON for the day to:
+The daily script also writes raw 1-minute intraday JSON for that full session to:
 
 ```text
 data/raw/SYMBOL/YYYY-MM-DD.json
 docs/data/intraday/SYMBOL/YYYY-MM-DD.json
 ```
 
-The dashboard uses those raw files to show the day trend with horizontal 08:00-08:30 high and low lines.
+The dashboard uses those raw files to show a one-session trend chart with horizontal 08:00-08:30 high and low lines.
 
 ## GitHub secret
 

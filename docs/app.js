@@ -15,7 +15,8 @@ const $ = (id) => document.getElementById(id);
 const fmt = (n, digits = 5) => Number(n).toLocaleString("en-US", { maximumFractionDigits: digits, minimumFractionDigits: digits });
 const pct = (n) => `${Number(n).toFixed(3)}%`;
 const displaySymbol = (symbol) => symbol.replace(/(NZD|GBP|AUD|BTC)USD/, "$1/USD");
-const timeOnly = (iso) => iso ? new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
+const nyTime = (iso) => iso ? new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) : "";
+const nyDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" }) : "";
 
 async function loadData() {
   const response = await fetch("data/daily_ranges.json", { cache: "no-store" });
@@ -31,8 +32,6 @@ function setupControls() {
   $("periodButtons").innerHTML = PERIODS.map(([label], index) => `<button class="secondary ${index === 5 ? "active" : ""}" data-period="${label}">${label}</button>`).join("");
   ["symbolFilter", "dateFilter", "startDateFilter", "endDateFilter", "tableSearch"].forEach((id) => $(id).addEventListener("input", render));
   ["chartSymbol", "chartDate"].forEach((id) => $(id).addEventListener("input", renderTrend));
-  const latest = latestDate(records);
-  if (latest) $("chartDate").value = latest;
   $("periodButtons").addEventListener("click", (event) => {
     const button = event.target.closest("button");
     if (!button) return;
@@ -102,8 +101,8 @@ function renderSummary() {
         <div class="metric"><span>Low</span><b>${fmt(record.low)}</b></div>
         <div class="metric"><span>Range</span><b>${fmt(record.range)}</b></div>
         <div class="metric"><span>Range %</span><b>${pct(record.range_percent)}</b></div>
-        <div class="metric"><span>High Time</span><b>${timeOnly(record.high_time)}</b></div>
-        <div class="metric"><span>Low Time</span><b>${timeOnly(record.low_time)}</b></div>
+        <div class="metric"><span>High Time</span><b>${nyTime(record.high_time)}</b></div>
+        <div class="metric"><span>Low Time</span><b>${nyTime(record.low_time)}</b></div>
       </div>
     </article>`;
   }).join("");
@@ -112,29 +111,27 @@ function renderSummary() {
 async function renderTrend() {
   const selectedSymbol = $("chartSymbol").value || "NZD/USD";
   const symbol = selectedSymbol.replace("/", "");
-  const date = $("chartDate").value || latestDate(records);
+  const selectedDate = $("chartDate").value;
+  const loaded = selectedDate
+    ? await loadIntradaySelection(symbol, selectedDate)
+    : await loadLatestCompletedIntraday(symbol);
+  const date = loaded.date;
   const range = records.find((record) => record.symbol === symbol && record.date === date);
-  $("trendMeta").textContent = `${selectedSymbol} on ${date || "no date selected"}`;
+  if (!selectedDate && date) $("chartDate").value = date;
+  $("trendMeta").textContent = `${selectedSymbol} session ${formatSession(date)}`;
   $("rangeLegend").innerHTML = range
-    ? `<span class="range-pill high">08:00 high ${fmt(range.high)}</span><span class="range-pill low">08:00 low ${fmt(range.low)}</span>`
+    ? `<span class="range-pill high">08:00-08:30 high ${fmt(range.high)}</span><span class="range-pill low">08:00-08:30 low ${fmt(range.low)}</span>`
     : `<span class="range-pill">No stored 08:00 range for this selection</span>`;
 
-  let candles = [];
-  try {
-    const response = await fetch(`data/intraday/${symbol}/${date}.json`, { cache: "no-store" });
-    if (response.ok) {
-      const payload = await response.json();
-      candles = payload.records || [];
-    }
-  } catch (error) {
-    candles = [];
+  drawTrendChart(loaded.candles, range);
+  if (loaded.warning) {
+    $("trendMeta").textContent = `${$("trendMeta").textContent} - ${loaded.warning}`;
   }
-  drawTrendChart(candles, range);
 }
 
 function drawTrendChart(candles, range) {
   const ctx = $("trendChart");
-  const labels = candles.map((candle) => timeOnly(candle.datetime));
+  const labels = candles.map((candle) => `${nyDate(candle.datetime)} ${nyTime(candle.datetime)}`);
   const closeData = candles.map((candle) => Number(candle.close));
   const highLine = range ? candles.map(() => Number(range.high)) : [];
   const lowLine = range ? candles.map(() => Number(range.low)) : [];
@@ -177,7 +174,7 @@ function drawTrendChart(candles, range) {
       scales: {
         x: {
           ticks: { maxTicksLimit: 24 },
-          title: { display: true, text: "Time of day, America/New_York" },
+          title: { display: true, text: "Session time: 8:00 AM to next-day 7:59 AM, America/New_York" },
         },
         y: { title: { display: true, text: "Price" } },
       },
@@ -189,6 +186,76 @@ function drawTrendChart(candles, range) {
   }
 }
 
+async function loadLatestCompletedIntraday(symbol) {
+  const dates = records
+    .filter((record) => record.symbol === symbol)
+    .map((record) => record.date)
+    .sort()
+    .reverse();
+  for (const date of dates) {
+    const selection = await loadIntradaySelection(symbol, date);
+    if (isFullSession(selection.candles, date)) return selection;
+  }
+  const fallbackDate = dates[0] || "";
+  return fallbackDate ? loadIntradaySelection(symbol, fallbackDate) : { date: "", candles: [], warning: "no intraday file yet" };
+}
+
+async function loadIntradaySelection(symbol, date) {
+  if (!date) return { date: "", candles: [], warning: "no date selected" };
+  try {
+    const response = await fetch(`data/intraday/${symbol}/${date}.json`, { cache: "no-store" });
+    if (!response.ok) return { date, candles: [], warning: "no intraday file yet" };
+    const payload = await response.json();
+    const candles = payload.records || [];
+    return {
+      date,
+      candles,
+      warning: isFullSession(candles, date) ? "" : "intraday file is not a full 8:00 AM to 7:59 AM session",
+    };
+  } catch (error) {
+    return { date, candles: [], warning: "no intraday file yet" };
+  }
+}
+
+function isFullSession(candles, sessionDate) {
+  if (candles.length < 1200) return false;
+  const first = candles[0]?.datetime;
+  const last = candles.at(-1)?.datetime;
+  return nyDateKey(first) === sessionDate && nyHourMinute(first) === "08:00"
+    && nyDateKey(last) === nextDateKey(sessionDate) && nyHourMinute(last) === "07:59";
+}
+
+function formatSession(date) {
+  if (!date) return "no date selected";
+  return `${date} 8:00 AM to ${nextDateKey(date)} 7:59 AM`;
+}
+
+function nyHourMinute(iso) {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "America/New_York",
+  });
+}
+
+function nyDateKey(iso) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "America/New_York",
+  }).formatToParts(new Date(iso));
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function nextDateKey(date) {
+  const next = new Date(`${date}T12:00:00`);
+  next.setDate(next.getDate() + 1);
+  return next.toISOString().slice(0, 10);
+}
+
 function renderTable(list) {
   const rows = [...list].sort((a, b) => b.date.localeCompare(a.date) || a.symbol.localeCompare(b.symbol));
   $("historyBody").innerHTML = rows.map((record) => `<tr>
@@ -198,8 +265,8 @@ function renderTable(list) {
     <td>${fmt(record.low)}</td>
     <td>${fmt(record.range)}</td>
     <td>${pct(record.range_percent)}</td>
-    <td>${timeOnly(record.high_time)}</td>
-    <td>${timeOnly(record.low_time)}</td>
+    <td>${nyTime(record.high_time)}</td>
+    <td>${nyTime(record.low_time)}</td>
     <td class="status-${record.status}">${record.status}</td>
     <td>${record.bar_count}</td>
   </tr>`).join("") || `<tr><td colspan="10" class="empty">No rows match the current filters.</td></tr>`;

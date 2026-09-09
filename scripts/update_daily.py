@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from datetime import datetime, time as dt_time
+from datetime import datetime, time as dt_time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -9,9 +9,6 @@ if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from scripts.config import INSTRUMENTS, NY_TIMEZONE
-from scripts.data_provider import ProviderError, TwelveDataProvider
-from scripts.ranges import calculate_daily_range
-from scripts.storage import merge_records, save_intraday_candles, save_records
 
 
 def target_date(now: datetime) -> datetime.date:
@@ -19,12 +16,16 @@ def target_date(now: datetime) -> datetime.date:
     if now.time() < window_ready:
         raise SystemExit(
             f"It is {now.strftime('%Y-%m-%d %H:%M %Z')} in New York. "
-            "The 08:00-08:30 window is not ready yet, so no data was saved."
+            "Yesterday's 08:00-07:59 session is not finalized yet, so no data was saved."
         )
-    return now.date()
+    return now.date() - timedelta(days=1)
 
 
 def main() -> None:
+    from scripts.data_provider import ProviderError, TwelveDataProvider
+    from scripts.ranges import calculate_daily_range
+    from scripts.storage import merge_records, save_intraday_candles, save_records
+
     now = datetime.now(ZoneInfo(NY_TIMEZONE))
     session_date = target_date(now)
     provider = TwelveDataProvider()
