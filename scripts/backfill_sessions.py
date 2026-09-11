@@ -28,6 +28,11 @@ def main() -> None:
     parser.add_argument("--start", required=True, type=parse_date, help="First session date, YYYY-MM-DD.")
     parser.add_argument("--end", required=True, type=parse_date, help="Last session date, YYYY-MM-DD.")
     parser.add_argument("--sleep", type=float, default=0.8, help="Seconds to pause between API calls.")
+    parser.add_argument(
+        "--symbols",
+        default="",
+        help="Optional comma-separated stored symbols to backfill, such as NZDUSD,GBPUSD.",
+    )
     args = parser.parse_args()
 
     if args.end < args.start:
@@ -35,7 +40,12 @@ def main() -> None:
 
     provider = TwelveDataProvider(sleep_seconds=args.sleep)
     records = []
-    for instrument in INSTRUMENTS:
+    requested_symbols = {symbol.strip().upper() for symbol in args.symbols.split(",") if symbol.strip()}
+    instruments = [instrument for instrument in INSTRUMENTS if not requested_symbols or instrument.storage_symbol in requested_symbols]
+    if not instruments:
+        raise SystemExit(f"No configured instruments match --symbols={args.symbols!r}")
+
+    for instrument in instruments:
         for session_date in session_dates(args.start, args.end):
             if instrument.asset_type == "forex" and session_date.weekday() >= 5:
                 print(f"Skipping {instrument.storage_symbol} {session_date}: forex weekend.")

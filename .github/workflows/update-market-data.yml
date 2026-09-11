@@ -14,6 +14,15 @@ on:
         description: "Optional last session date to backfill, YYYY-MM-DD"
         required: false
         type: string
+      backfill_symbols:
+        description: "Optional comma-separated symbols, for example NZDUSD,GBPUSD"
+        required: false
+        type: string
+      backfill_sleep:
+        description: "Optional seconds between provider calls"
+        required: false
+        default: "8"
+        type: string
 
 permissions:
   contents: write
@@ -43,7 +52,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.backfill_start != '' && inputs.backfill_end != '' }}
         env:
           TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
-        run: python scripts/backfill_sessions.py --start "${{ inputs.backfill_start }}" --end "${{ inputs.backfill_end }}"
+        run: python scripts/backfill_sessions.py --start "${{ inputs.backfill_start }}" --end "${{ inputs.backfill_end }}" --symbols "${{ inputs.backfill_symbols }}" --sleep "${{ inputs.backfill_sleep }}"
 
       - name: Run automated tests
         run: python -m unittest discover -s tests
