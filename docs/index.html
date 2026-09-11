@@ -21,11 +21,8 @@
       </div>
     </header>
 
-    <section class="summary-grid" id="summaryGrid" aria-label="Latest instrument ranges"></section>
-
     <section class="toolbar" aria-label="Filters">
       <label>Symbol<select id="symbolFilter"></select></label>
-      <label>Date<input id="dateFilter" type="date"></label>
       <label>Start<input id="startDateFilter" type="date"></label>
       <label>End<input id="endDateFilter" type="date"></label>
       <div class="periods" id="periodButtons" aria-label="Quick periods"></div>
@@ -39,7 +36,6 @@
             <span id="trendMeta">Select one symbol and one session date</span>
           </div>
           <div class="mini-controls">
-            <label>Chart Symbol<select id="chartSymbol"></select></label>
             <label>Session Date<input id="chartDate" type="date"></label>
           </div>
         </div>
@@ -48,14 +44,6 @@
           <canvas id="trendChart" width="1800" height="420" aria-label="Intraday price trend chart"></canvas>
         </div>
       </div>
-      <aside class="question-panel">
-        <h2>Ask the data</h2>
-        <form id="questionForm">
-          <input id="questionInput" autocomplete="off" placeholder="Try: Which symbol has the largest average range?">
-          <button>Ask</button>
-        </form>
-        <div class="answer" id="answerBox" aria-live="polite"></div>
-      </aside>
     </section>
 
     <section class="table-panel">
