@@ -35,11 +35,9 @@ function latestDate(list) {
 
 function filteredRecords() {
   const symbol = $("symbolFilter").value || SYMBOLS[0];
-  const date = $("sessionDate").value;
   const search = $("tableSearch").value.trim().toLowerCase();
   return records.filter((record) => {
     if (record.displaySymbol !== symbol) return false;
-    if (date && record.date !== date) return false;
     if (search && !Object.values(record).join(" ").toLowerCase().includes(search)) return false;
     return true;
   });
