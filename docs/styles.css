@@ -36,19 +36,20 @@ h2 { margin: 0; font-size: 18px; }
 .latest { padding: 14px 16px; min-width: 220px; }
 .latest span, .metric span, label, th { color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; }
 .latest strong { display: block; margin-top: 4px; font-size: 16px; }
-.toolbar { display: grid; grid-template-columns: minmax(150px, 220px) repeat(2, minmax(130px, 1fr)) auto; gap: 12px; padding: 14px; margin: 14px 0; align-items: end; }
+.toolbar { display: grid; grid-template-columns: minmax(150px, 220px) minmax(260px, 380px); gap: 12px; padding: 14px; margin: 14px 0; align-items: end; }
 label { display: grid; gap: 6px; }
 select, input { width: 100%; border: 1px solid var(--line); background: #fff; color: var(--ink); padding: 10px 11px; border-radius: 6px; }
 button { border: 1px solid var(--ink); background: var(--ink); color: #fff; padding: 10px 12px; border-radius: 6px; cursor: pointer; }
 button.secondary { background: #fff; color: var(--ink); }
 button.active { background: var(--accent); border-color: var(--accent); }
-.periods { display: flex; flex-wrap: wrap; gap: 6px; }
+.date-nav { display: grid; grid-template-columns: 42px 1fr 42px; gap: 8px; align-items: end; }
+.icon-button { width: 42px; height: 42px; display: grid; place-items: center; padding: 0; font-size: 28px; line-height: 1; }
+.icon-button:disabled { cursor: not-allowed; opacity: 0.4; }
 .analytics { display: block; }
 .chart-panel, .table-panel { padding: 16px; }
 .section-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
 .section-head span { color: var(--muted); font-size: 13px; }
-.mini-controls, .table-tools { display: flex; gap: 8px; align-items: end; }
-.mini-controls label { min-width: 170px; }
+.table-tools { display: flex; gap: 8px; align-items: end; }
 .range-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .range-pill { border: 1px solid var(--line); background: #fbfbf8; border-radius: 999px; padding: 7px 10px; font-weight: 800; }
 .range-pill.high { color: var(--accent-2); }
@@ -74,5 +75,6 @@ td { font-variant-numeric: tabular-nums; }
   .latest { margin-top: 14px; }
   .toolbar { grid-template-columns: 1fr; }
   .section-head { align-items: stretch; flex-direction: column; }
-  .mini-controls, .table-tools { display: grid; grid-template-columns: 1fr; }
+  .date-nav { grid-template-columns: 42px 1fr 42px; }
+  .table-tools { display: grid; grid-template-columns: 1fr; }
 }

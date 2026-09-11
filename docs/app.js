@@ -1,13 +1,4 @@
 const SYMBOLS = ["NZD/USD", "GBP/USD", "AUD/USD", "BTC/USD"];
-const PERIODS = [
-  ["7 Days", 7],
-  ["30 Days", 30],
-  ["90 Days", 90],
-  ["6 Months", 183],
-  ["1 Year", 365],
-  ["All", null],
-];
-
 let records = [];
 let trendChart;
 
@@ -28,30 +19,14 @@ async function loadData() {
 
 function setupControls() {
   $("symbolFilter").innerHTML = SYMBOLS.map((symbol) => `<option>${symbol}</option>`).join("");
-  $("periodButtons").innerHTML = PERIODS.map(([label], index) => `<button class="secondary ${index === 5 ? "active" : ""}" data-period="${label}">${label}</button>`).join("");
-  ["symbolFilter", "startDateFilter", "endDateFilter", "tableSearch"].forEach((id) => $(id).addEventListener("input", render));
-  $("chartDate").addEventListener("input", renderTrend);
+  ["symbolFilter", "sessionDate", "tableSearch"].forEach((id) => $(id).addEventListener("input", render));
   $("symbolFilter").addEventListener("input", () => {
-    $("chartDate").value = "";
-  });
-  $("periodButtons").addEventListener("click", (event) => {
-    const button = event.target.closest("button");
-    if (!button) return;
-    document.querySelectorAll("#periodButtons button").forEach((item) => item.classList.remove("active"));
-    button.classList.add("active");
-    const period = PERIODS.find(([label]) => label === button.dataset.period);
-    if (period?.[1]) {
-      const latest = latestDate(recordsForSelectedSymbol());
-      const start = new Date(`${latest}T00:00:00`);
-      start.setDate(start.getDate() - period[1] + 1);
-      $("startDateFilter").value = start.toISOString().slice(0, 10);
-      $("endDateFilter").value = latest;
-    } else {
-      $("startDateFilter").value = "";
-      $("endDateFilter").value = "";
-    }
+    $("sessionDate").value = latestDate(recordsForSelectedSymbol());
     render();
   });
+  $("prevDate").addEventListener("click", () => moveSessionDate(-1));
+  $("nextDate").addEventListener("click", () => moveSessionDate(1));
+  $("sessionDate").value = latestDate(recordsForSelectedSymbol());
 }
 
 function latestDate(list) {
@@ -60,13 +35,11 @@ function latestDate(list) {
 
 function filteredRecords() {
   const symbol = $("symbolFilter").value || SYMBOLS[0];
-  const start = $("startDateFilter").value;
-  const end = $("endDateFilter").value;
+  const date = $("sessionDate").value;
   const search = $("tableSearch").value.trim().toLowerCase();
   return records.filter((record) => {
     if (record.displaySymbol !== symbol) return false;
-    if (start && record.date < start) return false;
-    if (end && record.date > end) return false;
+    if (date && record.date !== date) return false;
     if (search && !Object.values(record).join(" ").toLowerCase().includes(search)) return false;
     return true;
   });
@@ -76,6 +49,7 @@ function render() {
   const visible = filteredRecords();
   renderLatestUpdate();
   renderTrend();
+  updateDateButtons();
   renderTable(visible);
   $("rowCount").textContent = `${visible.length} rows`;
 }
@@ -93,13 +67,13 @@ function renderLatestUpdate() {
 async function renderTrend() {
   const selectedSymbol = $("symbolFilter").value || SYMBOLS[0];
   const symbol = selectedSymbol.replace("/", "");
-  const selectedDate = $("chartDate").value;
+  const selectedDate = $("sessionDate").value;
   const loaded = selectedDate
     ? await loadIntradaySelection(symbol, selectedDate)
     : await loadLatestCompletedIntraday(symbol);
   const date = loaded.date;
   const range = records.find((record) => record.symbol === symbol && record.date === date);
-  if (!selectedDate && date) $("chartDate").value = date;
+  if (!selectedDate && date) $("sessionDate").value = date;
   $("trendMeta").textContent = `${selectedSymbol} session ${formatSession(date)}`;
   $("rangeLegend").innerHTML = range
     ? `<span class="range-pill high">High ${fmt(range.high)}</span><span class="range-pill low">Low ${fmt(range.low)}</span>`
@@ -180,6 +154,35 @@ async function loadLatestCompletedIntraday(symbol) {
   }
   const fallbackDate = dates[0] || "";
   return fallbackDate ? loadIntradaySelection(symbol, fallbackDate) : { date: "", candles: [], warning: "no intraday file yet" };
+}
+
+function selectedSymbolDates() {
+  return [...new Set(recordsForSelectedSymbol().map((record) => record.date))].sort();
+}
+
+function moveSessionDate(direction) {
+  const dates = selectedSymbolDates();
+  if (!dates.length) return;
+  const current = $("sessionDate").value || dates.at(-1);
+  let index = dates.indexOf(current);
+  if (index === -1) {
+    index = direction < 0
+      ? dates.findLastIndex((date) => date < current)
+      : dates.findIndex((date) => date > current);
+  } else {
+    index += direction;
+  }
+  index = Math.max(0, Math.min(dates.length - 1, index));
+  $("sessionDate").value = dates[index];
+  render();
+}
+
+function updateDateButtons() {
+  const dates = selectedSymbolDates();
+  const current = $("sessionDate").value;
+  const index = dates.indexOf(current);
+  $("prevDate").disabled = index <= 0;
+  $("nextDate").disabled = index === -1 || index >= dates.length - 1;
 }
 
 async function loadIntradaySelection(symbol, date) {

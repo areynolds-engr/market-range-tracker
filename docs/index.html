@@ -23,9 +23,11 @@
 
     <section class="toolbar" aria-label="Filters">
       <label>Symbol<select id="symbolFilter"></select></label>
-      <label>Start<input id="startDateFilter" type="date"></label>
-      <label>End<input id="endDateFilter" type="date"></label>
-      <div class="periods" id="periodButtons" aria-label="Quick periods"></div>
+      <div class="date-nav" aria-label="Session date navigation">
+        <button class="icon-button" id="prevDate" type="button" title="Previous day" aria-label="Previous day">‹</button>
+        <label>Session Date<input id="sessionDate" type="date"></label>
+        <button class="icon-button" id="nextDate" type="button" title="Next day" aria-label="Next day">›</button>
+      </div>
     </section>
 
     <section class="analytics">
@@ -34,9 +36,6 @@
           <div>
             <h2>Day Trend</h2>
             <span id="trendMeta">Select one symbol and one session date</span>
-          </div>
-          <div class="mini-controls">
-            <label>Session Date<input id="chartDate" type="date"></label>
           </div>
         </div>
         <div class="range-legend" id="rangeLegend"></div>
