@@ -5,6 +5,15 @@ on:
     - cron: "0 9 * * *"
       timezone: "America/New_York"
   workflow_dispatch:
+    inputs:
+      backfill_start:
+        description: "Optional first session date to backfill, YYYY-MM-DD"
+        required: false
+        type: string
+      backfill_end:
+        description: "Optional last session date to backfill, YYYY-MM-DD"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -25,9 +34,16 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Update daily market data
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.backfill_start == '' || inputs.backfill_end == '' }}
         env:
           TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
         run: python scripts/update_daily.py
+
+      - name: Backfill session data
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.backfill_start != '' && inputs.backfill_end != '' }}
+        env:
+          TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+        run: python scripts/backfill_sessions.py --start "${{ inputs.backfill_start }}" --end "${{ inputs.backfill_end }}"
 
       - name: Run automated tests
         run: python -m unittest discover -s tests
