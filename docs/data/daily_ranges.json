@@ -3671,6 +3671,25 @@
       "status": "complete",
       "provider": "Twelve Data",
       "updated_at": "2026-11-01T18:40:33+00:00"
+    },
+    {
+      "date": "2026-11-01",
+      "symbol": "BTCUSD",
+      "window_start": "2026-11-01T08:00:00-America/New_York",
+      "window_end": "2026-11-01T08:30:00-America/New_York",
+      "open": 77890.01,
+      "high": 78023.58,
+      "low": 77890.01,
+      "close": 77980.0,
+      "range": 133.57,
+      "range_percent": 0.171485,
+      "high_time": "2026-11-01T08:09:00-05:00",
+      "low_time": "2026-11-01T08:00:00-05:00",
+      "high_before_low": false,
+      "bar_count": 30,
+      "status": "complete",
+      "provider": "Twelve Data",
+      "updated_at": "2026-11-02T22:31:11+00:00"
     }
   ]
 }
